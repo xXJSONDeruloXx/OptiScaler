@@ -14,6 +14,20 @@ echo ""
 echo "Coping is strong with this one..."
 echo ""
 
+while true; do
+    read -p "Do you want to install OptiScaler? [y/n]: " install_choice
+    install_choice=$(echo "$install_choice" | tr -d ' ')
+    if [ "$install_choice" = "y" ] || [ "$install_choice" = "Y" ]; then
+        break
+    elif [ "$install_choice" = "n" ] || [ "$install_choice" = "N" ]; then
+        echo "Installation cancelled."
+        read -p "Press Enter to exit..."
+        exit 0
+    else
+        echo "Please enter y or n."
+    fi
+done
+
 # Remove extraction marker file if it exists
 rm -f "!! EXTRACT ALL FILES TO GAME FOLDER !!" 2>/dev/null
 
@@ -558,6 +572,13 @@ while true; do
                     case "$enabling_spoofing" in
                         ""|"1")
                             # Keep spoofing enabled (default)
+                            echo "Spoofing enabled - DLSS features will be available."
+                            
+                            # Offer FakeNVAPI installation for AMD/Intel users
+                            install_fakenvapi
+                            
+                            # Setup nvngx_dlss.dll for AMD/Intel users (only when spoofing enabled)
+                            setup_nvngx_dlss
                             break
                             ;;
                         "2")
@@ -570,7 +591,12 @@ while true; do
                                 # Use sed to replace Dxgi=auto with Dxgi=false
                                 sed -i 's/Dxgi=auto/Dxgi=false/g' "$config_file"
                                 echo "Spoofing disabled in configuration."
+                                echo "Note: DLSS features will not be available, so nvngx_dlss.dll setup is skipped."
                             fi
+                            
+                            # Still offer FakeNVAPI for AMD/Intel users even without spoofing
+                            # (can still be useful for some scenarios)
+                            install_fakenvapi
                             break
                             ;;
                         *)
@@ -579,12 +605,6 @@ while true; do
                             ;;
                     esac
                 done
-                
-                # Offer FakeNVAPI installation for AMD/Intel users
-                install_fakenvapi
-                
-                # Setup nvngx_dlss.dll for AMD/Intel users
-                setup_nvngx_dlss
             fi
             break
             ;;
@@ -620,7 +640,6 @@ create_uninstaller() {
     cat > "remove_optiscaler.sh" << 'EOF'
 #!/bin/bash
 
-clear
 echo " ::::::::  :::::::::  ::::::::::: :::::::::::  ::::::::   ::::::::      :::     :::        :::::::::: :::::::::  "
 echo ":+:    :+: :+:    :+:     :+:         :+:     :+:    :+: :+:    :+:   :+: :+:   :+:        :+:        :+:    :+: "
 echo "#+:    +:+ +:+    +:+     +:+         +:+     +:+        +:+         +:+   +:+  +:+        +:+        +:+    +:+ "
@@ -692,7 +711,7 @@ EOF
 create_uninstaller
 
 # Success message
-clear
+
 echo " OptiScaler setup completed successfully..."
 echo ""
 echo "  ___                 "
