@@ -26,6 +26,12 @@ SETUP_SUCCESS=false
 # Check if OptiScaler.dll exists
 if [ ! -f "OptiScaler.dll" ]; then
     echo "OptiScaler \"OptiScaler.dll\" file is not found!"
+    echo "Please make sure you extracted all OptiScaler files to the game folder."
+    echo ""
+    echo "For Unreal Engine games, look for the game executable in:"
+    echo "- <path-to-game>/Game-or-Project-name/Binaries/Win64/"
+    echo "- Ignore the Engine folder"
+    echo ""
     read -p "Press Enter to exit..."
     exit 1
 fi
@@ -128,6 +134,13 @@ echo "Running on Linux - spoofing configuration will be handled automatically."
 echo "If you need to disable spoofing, you can set Dxgi=false in the config"
 echo ""
 
+# Try to detect GPU type (basic detection)
+NVIDIA_DETECTED=false
+if command -v nvidia-smi >/dev/null 2>&1 || [ -d "/proc/driver/nvidia" ] || lspci 2>/dev/null | grep -i nvidia >/dev/null 2>&1; then
+    NVIDIA_DETECTED=true
+    echo "Nvidia GPU detected."
+fi
+
 # GPU type detection and configuration
 echo ""
 echo "Are you using an Nvidia GPU or AMD/Intel GPU?"
@@ -135,43 +148,50 @@ echo "[1] AMD/Intel"
 echo "[2] Nvidia"
 
 while true; do
-    read -p "Enter 1 or 2 (or press Enter for AMD/Intel): " gpu_choice
+    if [ "$NVIDIA_DETECTED" = true ]; then
+        read -p "Enter 1 or 2 (or press Enter for Nvidia): " gpu_choice
+    else
+        read -p "Enter 1 or 2 (or press Enter for AMD/Intel): " gpu_choice
+    fi
     
     case "$gpu_choice" in
         ""|"1")
-            # AMD/Intel GPU - ask about DLSS usage
-            echo ""
-            echo "Will you try to use DLSS inputs? (enables spoofing, required for DLSS FG, Reflex->AL2)"
-            echo "[1] Yes"
-            echo "[2] No"
-            
-            while true; do
-                read -p "Enter 1 or 2 (or press Enter for Yes): " enabling_spoofing
+            # Default logic: if Nvidia detected, skip AMD/Intel unless explicitly chosen
+            if [ "$gpu_choice" = "1" ] || [ "$NVIDIA_DETECTED" = false ]; then
+                # AMD/Intel GPU - ask about DLSS usage
+                echo ""
+                echo "Will you try to use DLSS inputs? (enables spoofing, required for DLSS FG, Reflex->AL2)"
+                echo "[1] Yes"
+                echo "[2] No"
                 
-                case "$enabling_spoofing" in
-                    ""|"1")
-                        # Keep spoofing enabled (default)
-                        break
-                        ;;
-                    "2")
-                        # Disable spoofing
-                        config_file="OptiScaler.ini"
-                        if [ ! -f "$config_file" ]; then
-                            echo "Config file not found: $config_file"
-                            read -p "Press Enter to continue..."
-                        else
-                            # Use sed to replace Dxgi=auto with Dxgi=false
-                            sed -i 's/Dxgi=auto/Dxgi=false/g' "$config_file"
-                            echo "Spoofing disabled in configuration."
-                        fi
-                        break
-                        ;;
-                    *)
-                        echo "Invalid choice. Please enter 1 or 2."
-                        continue
-                        ;;
-                esac
-            done
+                while true; do
+                    read -p "Enter 1 or 2 (or press Enter for Yes): " enabling_spoofing
+                    
+                    case "$enabling_spoofing" in
+                        ""|"1")
+                            # Keep spoofing enabled (default)
+                            break
+                            ;;
+                        "2")
+                            # Disable spoofing
+                            config_file="OptiScaler.ini"
+                            if [ ! -f "$config_file" ]; then
+                                echo "Config file not found: $config_file"
+                                read -p "Press Enter to continue..."
+                            else
+                                # Use sed to replace Dxgi=auto with Dxgi=false
+                                sed -i 's/Dxgi=auto/Dxgi=false/g' "$config_file"
+                                echo "Spoofing disabled in configuration."
+                            fi
+                            break
+                            ;;
+                        *)
+                            echo "Invalid choice. Please enter 1 or 2."
+                            continue
+                            ;;
+                    esac
+                done
+            fi
             break
             ;;
         "2")
@@ -196,6 +216,7 @@ echo "Renaming OptiScaler file to $selected_filename..."
 if ! mv "$OPTISCALER_FILE" "$selected_filename"; then
     echo ""
     echo "ERROR: Failed to rename OptiScaler file to $selected_filename."
+    echo "Please check file permissions and try again."
     read -p "Press Enter to exit..."
     exit 1
 fi
@@ -270,6 +291,23 @@ echo "  ___                 "
 echo " (_         '        "
 echo " /__  /)   /  () (/  "
 echo "         _/      /    "
+echo ""
+
+# Display Wine DLL override information
+echo "IMPORTANT FOR LINUX/WINE USERS:"
+echo "You need to add the renamed DLL to Wine overrides:"
+echo ""
+echo "WINEDLLOVERRIDES=$selected_filename=n,b %COMMAND%"
+echo ""
+echo "For example, if using Steam, add this to launch options:"
+echo "WINEDLLOVERRIDES=$selected_filename=n,b %command%"
+echo ""
+echo "Remember: Insert key opens OptiScaler overlay, Page Up/Down for performance stats"
+echo ""
+echo "Note: If you need to send log files for support, set LogLevel=0 and"
+echo "LogToFile=true in OptiScaler.ini (forced debugging is disabled since 0.7.7-Pre8)"
+echo ""
+echo "IMPORTANT: Do not rename OptiScaler.ini - it must stay as OptiScaler.ini"
 echo ""
 
 SETUP_SUCCESS=true
