@@ -125,6 +125,148 @@ select_filename() {
     done
 }
 
+# Function to download and install FakeNVAPI
+install_fakenvapi() {
+    echo ""
+    echo "FakeNVAPI provides Reflex-to-AL2/LFX conversion for AMD/Intel GPUs."
+    echo "This enables Anti-Lag 2 (RDNA cards) or Latency Flex support."
+    echo ""
+    echo "Would you like to download and install FakeNVAPI?"
+    echo "[1] Yes - Download and install FakeNVAPI"
+    echo "[2] No - Skip FakeNVAPI installation"
+    
+    while true; do
+        read -p "Enter 1 or 2 (or press Enter for No): " fakenvapi_choice
+        
+        case "$fakenvapi_choice" in
+            "1")
+                echo ""
+                echo "Downloading FakeNVAPI..."
+                
+                # Check if required tools are available
+                if ! command -v wget >/dev/null 2>&1 && ! command -v curl >/dev/null 2>&1; then
+                    echo "ERROR: Neither wget nor curl is available. Please install one of them first."
+                    echo "On most systems: sudo apt install wget  OR  sudo dnf install wget"
+                    read -p "Press Enter to continue without FakeNVAPI..."
+                    return 1
+                fi
+                
+                if ! command -v unzip >/dev/null 2>&1; then
+                    echo "ERROR: unzip is not available. Please install it first."
+                    echo "On most systems: sudo apt install unzip  OR  sudo dnf install unzip"
+                    read -p "Press Enter to continue without FakeNVAPI..."
+                    return 1
+                fi
+                
+                # Create temporary directory
+                TEMP_DIR=$(mktemp -d)
+                FAKENVAPI_URL="https://github.com/FakeMichau/fakenvapi/releases/download/v1.3.2/fakenvapi.zip"
+                FAKENVAPI_ZIP="$TEMP_DIR/fakenvapi.zip"
+                
+                # Download FakeNVAPI
+                echo "Downloading from: $FAKENVAPI_URL"
+                if command -v wget >/dev/null 2>&1; then
+                    if ! wget -O "$FAKENVAPI_ZIP" "$FAKENVAPI_URL"; then
+                        echo "ERROR: Failed to download FakeNVAPI with wget."
+                        rm -rf "$TEMP_DIR"
+                        read -p "Press Enter to continue without FakeNVAPI..."
+                        return 1
+                    fi
+                else
+                    if ! curl -L -o "$FAKENVAPI_ZIP" "$FAKENVAPI_URL"; then
+                        echo "ERROR: Failed to download FakeNVAPI with curl."
+                        rm -rf "$TEMP_DIR"
+                        read -p "Press Enter to continue without FakeNVAPI..."
+                        return 1
+                    fi
+                fi
+                
+                # Extract FakeNVAPI
+                echo "Extracting FakeNVAPI..."
+                if ! unzip -q "$FAKENVAPI_ZIP" -d "$TEMP_DIR"; then
+                    echo "ERROR: Failed to extract FakeNVAPI archive."
+                    rm -rf "$TEMP_DIR"
+                    read -p "Press Enter to continue without FakeNVAPI..."
+                    return 1
+                fi
+                
+                # Check if expected files exist
+                if [ ! -f "$TEMP_DIR/nvapi64.dll" ] || [ ! -f "$TEMP_DIR/fakenvapi.ini" ]; then
+                    echo "ERROR: Expected FakeNVAPI files not found in archive."
+                    echo "Looking for: nvapi64.dll and fakenvapi.ini"
+                    rm -rf "$TEMP_DIR"
+                    read -p "Press Enter to continue without FakeNVAPI..."
+                    return 1
+                fi
+                
+                # Copy files to game directory
+                echo "Installing FakeNVAPI files..."
+                
+                # Check for existing files and ask for overwrite
+                files_exist=false
+                if [ -f "nvapi64.dll" ]; then
+                    echo "WARNING: nvapi64.dll already exists in the current folder."
+                    files_exist=true
+                fi
+                if [ -f "fakenvapi.ini" ]; then
+                    echo "WARNING: fakenvapi.ini already exists in the current folder."
+                    files_exist=true
+                fi
+                
+                if [ "$files_exist" = true ]; then
+                    echo ""
+                    while true; do
+                        read -p "Do you want to overwrite existing FakeNVAPI files? [y/n]: " overwrite_fakenvapi
+                        overwrite_fakenvapi=$(echo "$overwrite_fakenvapi" | tr -d ' ')
+                        
+                        if [ "$overwrite_fakenvapi" = "y" ] || [ "$overwrite_fakenvapi" = "Y" ]; then
+                            break
+                        elif [ "$overwrite_fakenvapi" = "n" ] || [ "$overwrite_fakenvapi" = "N" ]; then
+                            echo "FakeNVAPI installation cancelled."
+                            rm -rf "$TEMP_DIR"
+                            return 1
+                        fi
+                    done
+                fi
+                
+                # Copy the files
+                if ! cp "$TEMP_DIR/nvapi64.dll" . || ! cp "$TEMP_DIR/fakenvapi.ini" .; then
+                    echo "ERROR: Failed to copy FakeNVAPI files to game directory."
+                    rm -rf "$TEMP_DIR"
+                    read -p "Press Enter to continue without FakeNVAPI..."
+                    return 1
+                fi
+                
+                # Cleanup
+                rm -rf "$TEMP_DIR"
+                
+                echo ""
+                echo "FakeNVAPI installed successfully!"
+                echo ""
+                echo "IMPORTANT FakeNVAPI Information:"
+                echo "- For Reflex-to-AL2/LFX conversion to work, Reflex must be enabled in game settings"
+                echo "- DLSS-FG automatically enables Reflex"
+                echo "- If the game doesn't expose Reflex, you can force it with force_reflex=2 in fakenvapi.ini"
+                echo "- Anti-Lag 2 only supports RDNA cards and is Windows only"
+                echo "- Latency Flex is cross-vendor and cross-platform"
+                echo "- AL2 overlay shortcut: Alt+Shift+L"
+                echo "- If you get low fps stutters with LFX, set force_reflex=1 in fakenvapi.ini"
+                echo ""
+                return 0
+                ;;
+            ""|"2")
+                echo ""
+                echo "Skipping FakeNVAPI installation."
+                return 1
+                ;;
+            *)
+                echo "Invalid choice. Please enter 1 or 2."
+                continue
+                ;;
+        esac
+    done
+}
+
 # Call filename selection function
 select_filename
 
@@ -191,6 +333,9 @@ while true; do
                             ;;
                     esac
                 done
+                
+                # Offer FakeNVAPI installation for AMD/Intel users
+                install_fakenvapi
             fi
             break
             ;;
@@ -249,6 +394,13 @@ if [ "$remove_choice" = "y" ] || [ "$remove_choice" = "Y" ]; then
     rm -f OptiScaler.ini
     rm -f "OptiScaler Setup.bat"
     rm -f SELECTED_FILENAME_PLACEHOLDER
+    
+    # Remove FakeNVAPI files if they exist
+    if [ -f "nvapi64.dll" ] || [ -f "fakenvapi.ini" ]; then
+        echo "Removing FakeNVAPI files..."
+        rm -f nvapi64.dll
+        rm -f fakenvapi.ini
+    fi
     
     # Remove directories
     rm -rf D3D12_Optiscaler
