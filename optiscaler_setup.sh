@@ -247,6 +247,7 @@ if [ "$remove_choice" = "y" ] || [ "$remove_choice" = "Y" ]; then
     # Remove OptiScaler files
     rm -f OptiScaler.log
     rm -f OptiScaler.ini
+    rm -f "OptiScaler Setup.bat"
     rm -f SELECTED_FILENAME_PLACEHOLDER
     
     # Remove directories
