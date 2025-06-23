@@ -128,15 +128,25 @@ select_filename() {
 # Call filename selection function
 select_filename
 
-# Since we're on Linux, we skip Wine detection and go straight to GPU configuration
-echo ""
-echo "Running on Linux - spoofing configuration will be handled automatically."
-echo "If you need to disable spoofing, you can set Dxgi=false in the config"
 echo ""
 
-# Try to detect GPU type (basic detection)
+# Try to detect GPU type (enhanced detection)
 NVIDIA_DETECTED=false
-if command -v nvidia-smi >/dev/null 2>&1 || [ -d "/proc/driver/nvidia" ] || lspci 2>/dev/null | grep -i nvidia >/dev/null 2>&1; then
+if command -v nvidia-smi >/dev/null 2>&1; then
+    if nvidia-smi >/dev/null 2>&1; then
+        exit_code=$?
+        if [ $exit_code -eq 0 ]; then
+            NVIDIA_DETECTED=true
+            echo "Nvidia GPU detected."
+        elif [ $exit_code -eq 9 ]; then
+            NVIDIA_DETECTED=false
+        else
+            NVIDIA_DETECTED=false
+        fi
+    else
+        NVIDIA_DETECTED=false
+    fi
+elif [ -d "/proc/driver/nvidia" ] || lspci 2>/dev/null | grep -i nvidia >/dev/null 2>&1; then
     NVIDIA_DETECTED=true
     echo "Nvidia GPU detected."
 fi
