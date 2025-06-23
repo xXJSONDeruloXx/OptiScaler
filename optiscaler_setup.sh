@@ -267,6 +267,252 @@ install_fakenvapi() {
     done
 }
 
+# Function to find and setup nvngx_dlss.dll for AMD/Intel users
+setup_nvngx_dlss() {
+    echo ""
+    echo "Setting up nvngx_dlss.dll for AMD/Intel GPU compatibility..."
+    echo ""
+    
+    # Check if nvngx.dll already exists
+    if [ -f "nvngx.dll" ]; then
+        echo "nvngx.dll already exists in the current folder."
+        while true; do
+            read -p "Do you want to overwrite the existing nvngx.dll? [y/n]: " overwrite_nvngx
+            overwrite_nvngx=$(echo "$overwrite_nvngx" | tr -d ' ')
+            
+            if [ "$overwrite_nvngx" = "y" ] || [ "$overwrite_nvngx" = "Y" ]; then
+                break
+            elif [ "$overwrite_nvngx" = "n" ] || [ "$overwrite_nvngx" = "N" ]; then
+                echo "Skipping nvngx.dll setup."
+                return 0
+            fi
+        done
+    fi
+    
+    # Step 3a: Try to find nvngx_dlss.dll locally (UE games)
+    echo "Step 1: Searching for existing nvngx_dlss.dll file..."
+    
+    # Search patterns for nvngx_dlss.dll
+    NVNGX_DLSS_FOUND=""
+    
+    # Check common locations relative to current directory
+    SEARCH_PATHS=(
+        "."
+        "../.."
+        "../../.."
+        "../../../.."
+        "../../../../.."
+    )
+    
+    for base_path in "${SEARCH_PATHS[@]}"; do
+        if [ -d "$base_path" ]; then
+            # Look for nvngx_dlss.dll in Engine/Plugins subdirectories (UE games)
+            if [ -d "$base_path/Engine/Plugins" ]; then
+                echo "  Searching in $base_path/Engine/Plugins..."
+                NVNGX_DLSS_FOUND=$(find "$base_path/Engine/Plugins" -name "nvngx_dlss.dll" -type f 2>/dev/null | head -1)
+                if [ -n "$NVNGX_DLSS_FOUND" ]; then
+                    break
+                fi
+            fi
+            
+            # Also search the base path and immediate subdirectories
+            NVNGX_DLSS_FOUND=$(find "$base_path" -maxdepth 3 -name "nvngx_dlss.dll" -type f 2>/dev/null | head -1)
+            if [ -n "$NVNGX_DLSS_FOUND" ]; then
+                break
+            fi
+        fi
+    done
+    
+    if [ -n "$NVNGX_DLSS_FOUND" ]; then
+        echo "  Found nvngx_dlss.dll at: $NVNGX_DLSS_FOUND"
+        echo "  Copying and renaming to nvngx.dll..."
+        
+        if cp "$NVNGX_DLSS_FOUND" "nvngx.dll"; then
+            echo ""
+            echo "✓ Successfully copied nvngx_dlss.dll to nvngx.dll"
+            return 0
+        else
+            echo "  ERROR: Failed to copy nvngx_dlss.dll"
+        fi
+    else
+        echo "  No local nvngx_dlss.dll found."
+    fi
+    
+    # Step 3b: Download from Streamline SDK if local search failed
+    echo ""
+    echo "Step 2: Downloading nvngx_dlss.dll from NVIDIA Streamline SDK..."
+    
+    # Check if required tools are available
+    if ! command -v wget >/dev/null 2>&1 && ! command -v curl >/dev/null 2>&1; then
+        echo "ERROR: Neither wget nor curl is available for downloading."
+        echo "Please install wget or curl and try again."
+        echo "On most systems: sudo apt install wget  OR  sudo dnf install wget"
+        manual_instruction
+        return 1
+    fi
+    
+    if ! command -v unzip >/dev/null 2>&1; then
+        echo "ERROR: unzip is not available for extracting the SDK."
+        echo "Please install unzip and try again."
+        echo "On most systems: sudo apt install unzip  OR  sudo dnf install unzip"
+        manual_instruction
+        return 1
+    fi
+    
+    # Create temporary directory
+    TEMP_DIR=$(mktemp -d)
+    
+    echo "  Getting latest Streamline SDK release info..."
+    
+    # Try to get the latest release info from GitHub API
+    GITHUB_API_URL="https://api.github.com/repos/NVIDIA-RTX/Streamline/releases/latest"
+    RELEASE_INFO="$TEMP_DIR/release_info.json"
+    STREAMLINE_URL=""
+    
+    # Download release info
+    if command -v wget >/dev/null 2>&1; then
+        if wget -q -O "$RELEASE_INFO" "$GITHUB_API_URL" 2>/dev/null; then
+            # Extract download URL from the JSON response
+            STREAMLINE_URL=$(grep -o '"browser_download_url":[[:space:]]*"[^"]*streamline-sdk-[^"]*\.zip"' "$RELEASE_INFO" 2>/dev/null | sed 's/.*"browser_download_url":[[:space:]]*"//;s/".*//' | head -1)
+        fi
+    elif command -v curl >/dev/null 2>&1; then
+        if curl -s -o "$RELEASE_INFO" "$GITHUB_API_URL" 2>/dev/null; then
+            # Extract download URL from the JSON response
+            STREAMLINE_URL=$(grep -o '"browser_download_url":[[:space:]]*"[^"]*streamline-sdk-[^"]*\.zip"' "$RELEASE_INFO" 2>/dev/null | sed 's/.*"browser_download_url":[[:space:]]*"//;s/".*//' | head -1)
+        fi
+    fi
+    
+    # Fallback URLs if API fails
+    FALLBACK_URLS=(
+        "https://github.com/NVIDIA-RTX/Streamline/releases/download/v2.8.0/streamline-sdk-v2.8.0.zip"
+        "https://github.com/NVIDIA-RTX/Streamline/releases/download/v2.7.32/streamline-sdk-v2.7.32.zip"
+        "https://github.com/NVIDIA-RTX/Streamline/releases/download/v2.7.31/streamline-sdk-v2.7.31.zip"
+    )
+    
+    # If API failed or couldn't parse, use fallback URLs
+    if [ -z "$STREAMLINE_URL" ]; then
+        echo "  Could not get latest release info from API, trying known versions..."
+        STREAMLINE_URL="${FALLBACK_URLS[0]}"
+    fi
+    
+    STREAMLINE_ZIP="$TEMP_DIR/streamline-sdk.zip"
+    
+    echo "  Downloading from: $STREAMLINE_URL"
+    
+    # Try to download Streamline SDK with fallbacks
+    DOWNLOAD_SUCCESS=false
+    URLS_TO_TRY=("$STREAMLINE_URL")
+    
+    # If the first URL isn't from our fallback list, add fallbacks
+    if [[ ! " ${FALLBACK_URLS[@]} " =~ " ${STREAMLINE_URL} " ]]; then
+        URLS_TO_TRY+=("${FALLBACK_URLS[@]}")
+    fi
+    
+    for url in "${URLS_TO_TRY[@]}"; do
+        echo "  Trying: $url"
+        
+        if command -v wget >/dev/null 2>&1; then
+            if wget --progress=dot:giga -O "$STREAMLINE_ZIP" "$url" 2>/dev/null; then
+                DOWNLOAD_SUCCESS=true
+                break
+            fi
+        else
+            if curl -L --progress-bar -o "$STREAMLINE_ZIP" "$url" 2>/dev/null; then
+                DOWNLOAD_SUCCESS=true
+                break
+            fi
+        fi
+        
+        echo "  Failed to download from: $url"
+        
+        # Don't try more URLs if this was the last one
+        if [ "$url" != "${URLS_TO_TRY[-1]}" ]; then
+            echo "  Trying next URL..."
+        fi
+    done
+    
+    if [ "$DOWNLOAD_SUCCESS" = false ]; then
+        rm -rf "$TEMP_DIR"
+        echo ""
+        echo "  All download attempts failed. This could be due to:"
+        echo "  - Network connectivity issues"
+        echo "  - GitHub servers being unavailable"
+        echo "  - Release URLs may have changed"
+        echo ""
+        echo "  You can try downloading manually from:"
+        echo "  https://github.com/NVIDIA-RTX/Streamline/releases/latest"
+        echo "  Look for 'streamline-sdk-*.zip' file"
+        manual_instruction
+        return 1
+    fi
+    
+    echo "  Extracting Streamline SDK..."
+    if ! unzip -q "$STREAMLINE_ZIP" -d "$TEMP_DIR" 2>/dev/null; then
+        echo "  ERROR: Failed to extract Streamline SDK archive."
+        rm -rf "$TEMP_DIR"
+        manual_instruction
+        return 1
+    fi
+    
+    # Search for nvngx_dlss.dll in the extracted SDK
+    NVNGX_DLSS_SDK=$(find "$TEMP_DIR" -name "nvngx_dlss.dll" -type f 2>/dev/null | head -1)
+    
+    if [ -z "$NVNGX_DLSS_SDK" ]; then
+        echo "  ERROR: nvngx_dlss.dll not found in Streamline SDK archive."
+        rm -rf "$TEMP_DIR"
+        manual_instruction
+        return 1
+    fi
+    
+    echo "  Found nvngx_dlss.dll in SDK, copying and renaming to nvngx.dll..."
+    
+    if cp "$NVNGX_DLSS_SDK" "nvngx.dll"; then
+        echo ""
+        echo "✓ Successfully downloaded and installed nvngx_dlss.dll as nvngx.dll"
+        rm -rf "$TEMP_DIR"
+        return 0
+    else
+        echo "  ERROR: Failed to copy nvngx_dlss.dll from SDK."
+        rm -rf "$TEMP_DIR"
+        manual_instruction
+        return 1
+    fi
+}
+
+# Function to provide manual instructions if automatic setup fails
+manual_instruction() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "                        MANUAL SETUP REQUIRED"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "To enable DLSS features on AMD/Intel GPUs, you need nvngx_dlss.dll."
+    echo "Please choose one of the following options:"
+    echo ""
+    echo "📁 OPTION A - Find locally (for Unreal Engine games):"
+    echo "   1. Navigate to your game's root folder"
+    echo "   2. Look for nvngx_dlss.dll in Engine/Plugins subdirectories"
+    echo "   3. Copy the file to this folder (where OptiScaler is installed)"
+    echo "   4. Rename it to: nvngx.dll"
+    echo ""
+    echo "🌐 OPTION B - Download manually:"
+    echo "   1. Visit: https://github.com/NVIDIA-RTX/Streamline/releases/latest"
+    echo "   2. Download the 'streamline-sdk-*.zip' file"
+    echo "   3. Extract and find nvngx_dlss.dll inside"
+    echo "   4. Copy it to this folder and rename to: nvngx.dll"
+    echo ""
+    echo "   Alternative download sources:"
+    echo "   - TechPowerUp GPU database"
+    echo "   - NVIDIA Developer website"
+    echo ""
+    echo "⏭️  OPTION C - Skip (recommended if unsure):"
+    echo "   OptiScaler will try to find nvngx_dlss.dll automatically at runtime."
+    echo "   You can always add it later if needed."
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    read -p "Press Enter when you've completed manual setup or want to skip..."
+}
+
 # Call filename selection function
 select_filename
 
@@ -336,6 +582,9 @@ while true; do
                 
                 # Offer FakeNVAPI installation for AMD/Intel users
                 install_fakenvapi
+                
+                # Setup nvngx_dlss.dll for AMD/Intel users
+                setup_nvngx_dlss
             fi
             break
             ;;
@@ -400,6 +649,12 @@ if [ "$remove_choice" = "y" ] || [ "$remove_choice" = "Y" ]; then
         echo "Removing FakeNVAPI files..."
         rm -f nvapi64.dll
         rm -f fakenvapi.ini
+    fi
+    
+    # Remove nvngx.dll if it exists
+    if [ -f "nvngx.dll" ]; then
+        echo "Removing nvngx.dll..."
+        rm -f nvngx.dll
     fi
     
     # Remove directories
