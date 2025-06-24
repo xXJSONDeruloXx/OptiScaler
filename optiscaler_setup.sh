@@ -130,21 +130,12 @@ select_filename
 
 echo ""
 
-# Try to detect GPU type (enhanced detection)
+# Try to detect GPU type
 NVIDIA_DETECTED=false
 if command -v nvidia-smi >/dev/null 2>&1; then
     if nvidia-smi >/dev/null 2>&1; then
-        exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            NVIDIA_DETECTED=true
-            echo "Nvidia GPU detected."
-        elif [ $exit_code -eq 9 ]; then
-            NVIDIA_DETECTED=false
-        else
-            NVIDIA_DETECTED=false
-        fi
-    else
-        NVIDIA_DETECTED=false
+        NVIDIA_DETECTED=true
+        echo "Nvidia GPU detected."
     fi
 elif [ -d "/proc/driver/nvidia" ] || lspci 2>/dev/null | grep -i nvidia >/dev/null 2>&1; then
     NVIDIA_DETECTED=true
