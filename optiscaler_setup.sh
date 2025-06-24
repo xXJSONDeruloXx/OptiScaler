@@ -15,7 +15,7 @@ echo "Coping is strong with this one..."
 echo ""
 
 # Remove extraction marker file if it exists
-rm -f "!! EXTRACT ALL FILES TO GAME FOLDER !!" 2>/dev/null
+rm -f "$SCRIPT_DIR/!! EXTRACT ALL FILES TO GAME FOLDER !!" 2>/dev/null
 
 # Get the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
