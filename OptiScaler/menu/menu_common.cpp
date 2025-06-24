@@ -2028,6 +2028,53 @@ bool MenuCommon::RenderMenu()
 
                                     ImGui::EndTable();
                                 }
+
+                                std::array<const char*, 7> models = { "Default", "Model 0", "Model 1", "Model 2",
+                                                                      "Model 3", "Model 4", "Model 5" };
+
+                                // Conversion from 0 -> 6 into nullopt + 0 -> 5 is required
+                                uint32_t configModes = 0;
+
+                                if (Config::Instance()->Fsr4Model.has_value())
+                                    configModes = Config::Instance()->Fsr4Model.value_or(0) + 1;
+
+                                if (configModes < 0 || configModes >= models.size())
+                                    configModes = 0;
+
+                                const char* selectedModel = models[configModes];
+
+                                if (ImGui::BeginCombo("Models", selectedModel))
+                                {
+                                    for (int n = 0; n < models.size(); n++)
+                                    {
+                                        uint32_t selection = 0;
+
+                                        if (Config::Instance()->Fsr4Model.has_value())
+                                            selection = Config::Instance()->Fsr4Model.value_or(0) + 1;
+
+                                        if (ImGui::Selectable(models[n], selection == n))
+                                        {
+                                            if (n < 1)
+                                                Config::Instance()->Fsr4Model.reset();
+                                            else
+                                                Config::Instance()->Fsr4Model = n - 1;
+
+                                            State::Instance().newBackend = currentBackend;
+                                            MARK_ALL_BACKENDS_CHANGED();
+                                        }
+                                    }
+
+                                    ImGui::EndCombo();
+                                }
+                                ShowHelpMarker("Model 0 is meant for FSR AA/Ultra Quality\n"
+                                               "Model 1 is meant for Quality\n"
+                                               "Model 2 is meant for Balanced\n"
+                                               "Model 3 is meant for Performance\n"
+                                               "Model 5 is meant for Ultra Performance");
+
+                                ImGui::Spacing();
+                                ImGui::Text("Current model: %d", State::Instance().currentFsr4Model);
+                                ImGui::Spacing();
                             }
 
                             if (majorFsrVersion == 3)
