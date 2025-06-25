@@ -7,8 +7,8 @@ name: Build
 
 on:
   workflow_dispatch:
-# push:
-#   branches: [ "master" ]
+  push:
+    branches: [ "bundle-externals-nvngx" ]
 #  pull_request:
 #    branches: [ "master" ]
     
@@ -192,6 +192,51 @@ jobs:
         Write-Output "Successfully copied nvapi64.dll and fakenvapi.ini to artifact directory"
       continue-on-error: false
     
+    - name: Download latest Streamline SDK
+      id: streamline_download
+      shell: powershell
+      run: |
+        # Get the latest release info from the API
+        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/NVIDIA-RTX/Streamline/releases/latest"
+        
+        # Find the streamline-sdk zip asset
+        $asset = $releases.assets | Where-Object { 
+          $_.name -match "streamline-sdk.*\.zip" -or
+          $_.name -match "streamline-sdk-v\d+\.\d+\.\d+\.zip"
+        } | Select-Object -First 1
+        
+        if (-not $asset) {
+            Write-Error "Could not find streamline-sdk zip in the latest release"
+            exit 1
+        }
+        
+        Write-Output "Downloading $($asset.name)..."
+        
+        # Download the asset
+        $downloadUrl = $asset.browser_download_url
+        $zipPath = "${{ github.workspace }}\streamline-sdk.zip"
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
+        
+        # Extract the ZIP file
+        $extractPath = "${{ github.workspace }}\streamline-temp"
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+        
+        # Find the nvngx_dlss.dll file in the extracted directory (search all possible locations)
+        $nvngxDlssPath = Get-ChildItem -Path $extractPath -Recurse -Filter "nvngx_dlss.dll" | Select-Object -First 1 -ExpandProperty FullName
+        
+        if (-not $nvngxDlssPath) {
+            Write-Error "Could not find nvngx_dlss.dll in the extracted files"
+            exit 1
+        }
+        
+        Write-Output "Found nvngx_dlss.dll at: $nvngxDlssPath"
+        
+        # Copy the file to the artifact directory and rename it to nvngx.dll
+        Copy-Item -Path $nvngxDlssPath -Destination "${{ github.workspace }}\x64\Release\a\nvngx.dll"
+        
+        Write-Output "Successfully copied nvngx_dlss.dll to artifact directory as nvngx.dll"
+      continue-on-error: false
+    
     # Create NVIDIA version (without external files)
     - name: Create NVIDIA version (without external files)
       shell: powershell
@@ -207,6 +252,7 @@ jobs:
         Remove-Item -Path "$nvidiaDir\dlssg_to_fsr3_amd_is_better.dll" -ErrorAction SilentlyContinue
         Remove-Item -Path "$nvidiaDir\fakenvapi.ini" -ErrorAction SilentlyContinue
         Remove-Item -Path "$nvidiaDir\nvapi64.dll" -ErrorAction SilentlyContinue
+        Remove-Item -Path "$nvidiaDir\nvngx.dll" -ErrorAction SilentlyContinue
         
         Write-Output "Successfully created NVIDIA version directory without external files"
     
