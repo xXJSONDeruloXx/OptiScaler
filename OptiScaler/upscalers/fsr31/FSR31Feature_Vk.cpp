@@ -94,7 +94,7 @@ static inline FfxApiResourceDescription ffxApiGetImageResourceDescriptionVKLocal
         return resourceDescription;
 
     // Set flags properly for resource registration
-    resourceDescription.flags = FFX_API_RESOURCE_USAGE_READ_ONLY;
+    resourceDescription.usage = FFX_API_RESOURCE_USAGE_READ_ONLY;
 
     // Unordered access use
     if (vkResource->ReadWrite)
