@@ -310,7 +310,7 @@ void Hudfix_Dx12::HudlessFound()
     // Increase counter
     _fgCounter++;
 
-    State::Instance().currentFG->DispatchHudless(true, State::Instance().lastFrameTime);
+    // State::Instance().currentFG->DispatchHudless(true, State::Instance().lastFrameTime);
 
     _skipHudlessChecks = false;
 }
