@@ -46,7 +46,7 @@ void fakenvapi::reportFGPresent(IDXGISwapChain* pSwapChain, bool fg_state, bool 
         // and it will call SetFrameGenFrameType for us
         auto static ffxApiVersion = FfxApiProxy::VersionDx12();
         constexpr feature_version requiredVersion = { 3, 1, 1 };
-        if (isVersionOrBetter(ffxApiVersion, requiredVersion) && updateModeAndContext())
+        if (ffxApiVersion >= requiredVersion && updateModeAndContext())
         {
             if (_lowLatencyContext != nullptr && _lowLatencyMode == Mode::AntiLag2)
             {
@@ -91,12 +91,10 @@ bool fakenvapi::updateModeAndContext()
     // fallback for older fakenvapi builds
     if (Fake_GetAntiLagCtx)
     {
-        _lowLatencyMode = Mode::LatencyFlex;
-
         auto result = Fake_GetAntiLagCtx(&_lowLatencyContext);
 
         if (result != NVAPI_OK)
-            LOG_ERROR("Can't get AntiLag 2 context from fakenvapi");
+            _lowLatencyMode = Mode::LatencyFlex;
         else
             _lowLatencyMode = Mode::AntiLag2;
 
