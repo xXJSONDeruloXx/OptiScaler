@@ -246,7 +246,7 @@ md $(SolutionDir)x64\Release\a\DlssOverrides
 copy $(SolutionDir)external\nvngx_dlss_sdk\regs\*.* $(SolutionDir)x64\Release\a\DlssOverrides /Y
 md $(SolutionDir)x64\Release\a\Licenses
 del /Q $(SolutionDir)x64\Release\a\Licenses\*.*
-copy $(SolutionDir)external\xess\licenses\LICENSE.pdf $(SolutionDir)x64\Release\a\Licenses\XeSS_LICENSE.pdf /Y
+copy $(SolutionDir)external\xess\LICENSE.txt $(SolutionDir)x64\Release\a\Licenses\XeSS_LICENSE.txt /Y
 copy $(SolutionDir)external\xess\bin\libxess.dll $(SolutionDir)x64\Release\a\ /Y
 copy $(SolutionDir)external\xess\bin\libxess_dx11.dll $(SolutionDir)x64\Release\a\ /Y
 copy $(SolutionDir)external\FidelityFX-SDK\docs\license.md $(SolutionDir)x64\Release\a\Licenses\FidelityFX_LICENSE.md /Y
@@ -255,7 +255,7 @@ copy $(SolutionDir)OptiScaler.ini $(SolutionDir)x64\Release\a\ /Y
 copy "$(SolutionDir)OptiScaler Setup.bat" $(SolutionDir)x64\Release\a\ /Y
 md $(SolutionDir)x64\Release\a\D3D12_Optiscaler\
 copy "$(SolutionDir)external\directx_agility_sdk\lib\*.dll" $(SolutionDir)x64\Release\a\D3D12_Optiscaler\ /Y
-copy "$(SolutionDir)external\directx_agility_sdk\LICENSE.txt" $(SolutionDir)x64\Release\a\D3D12_Optiscaler\LICENSE.txt /Y
+copy "$(SolutionDir)external\directx_agility_sdk\LICENSE.txt" $(SolutionDir)x64\Release\a\Licenses\DirectX_LICENSE.txt /Y
 copy NUL "$(SolutionDir)x64\Release\a\!! EXTRACT ALL FILES TO GAME FOLDER !!" /Y</Command>
     </PostBuildEvent>
     <PreBuildEvent>
