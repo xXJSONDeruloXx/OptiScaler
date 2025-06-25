@@ -297,6 +297,8 @@ void IFeature_Dx11wDx12::GetHardwareAdapter(IDXGIFactory1* InFactory, IDXGIAdapt
     IDXGIFactory6* factory6;
     if (SUCCEEDED(InFactory->QueryInterface(IID_PPV_ARGS(&factory6))))
     {
+        LOG_DEBUG("Using IDXGIFactory6 & EnumAdapterByGpuPreference");
+
         for (UINT adapterIndex = 0;
              DXGI_ERROR_NOT_FOUND != factory6->EnumAdapterByGpuPreference(adapterIndex,
                                                                           InRequestHighPerformanceAdapter == true
@@ -309,16 +311,12 @@ void IFeature_Dx11wDx12::GetHardwareAdapter(IDXGIFactory1* InFactory, IDXGIAdapt
             adapter->GetDesc1(&desc);
 
             if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-            {
-                // Don't select the Basic Render Driver adapter.
-                // If you want a software adapter, pass in "/warp" on the command line.
                 continue;
-            }
 
             // Check to see whether the adapter supports Direct3D 12, but don't create the
             // actual device yet.
-
             auto result = D3D12CreateDevice(adapter, InFeatureLevel, _uuidof(ID3D12Device), nullptr);
+            LOG_DEBUG("D3D12CreateDevice test result: {:X}", (UINT) result);
 
             if (result == S_FALSE)
             {
@@ -329,6 +327,7 @@ void IFeature_Dx11wDx12::GetHardwareAdapter(IDXGIFactory1* InFactory, IDXGIAdapt
     }
     else
     {
+        LOG_DEBUG("Using InFactory & EnumAdapters1");
         for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != InFactory->EnumAdapters1(adapterIndex, &adapter);
              ++adapterIndex)
         {
@@ -336,19 +335,15 @@ void IFeature_Dx11wDx12::GetHardwareAdapter(IDXGIFactory1* InFactory, IDXGIAdapt
             adapter->GetDesc1(&desc);
 
             if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-            {
-                // Don't select the Basic Render Driver adapter.
-                // If you want a software adapter, pass in "/warp" on the command line.
                 continue;
-            }
 
             // Check to see whether the adapter supports Direct3D 12, but don't create the
             // actual device yet.
-
             auto result = D3D12CreateDevice(adapter, InFeatureLevel, _uuidof(ID3D12Device), nullptr);
 
             if (result == S_FALSE)
             {
+                LOG_DEBUG("D3D12CreateDevice test result: {:X}", (UINT) result);
                 *InAdapter = adapter;
                 break;
             }
@@ -382,18 +377,13 @@ HRESULT IFeature_Dx11wDx12::CreateDx12Device(D3D_FEATURE_LEVEL InFeatureLevel)
         GetHardwareAdapter(factory, &hardwareAdapter, InFeatureLevel, true);
 
         if (hardwareAdapter == nullptr)
-        {
-            LOG_ERROR("Can't get hardwareAdapter!");
-            State::Instance().vulkanSkipHooks = false;
-            State::Instance().skipSpoofing = false;
-            return E_NOINTERFACE;
-        }
+            LOG_WARN("Can't get hardwareAdapter, will try nullptr!");
 
         result = D3D12CreateDevice(hardwareAdapter, InFeatureLevel, IID_PPV_ARGS(&Dx12Device));
 
         if (result != S_OK)
         {
-            LOG_ERROR("Can't create device: {0:x}", result);
+            LOG_ERROR("Can't create device: {:X}", (UINT) result);
             State::Instance().vulkanSkipHooks = false;
             State::Instance().skipSpoofing = false;
             return result;
