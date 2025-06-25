@@ -409,7 +409,7 @@ ffxReturnCode_t ffxQuery_Dx12(ffxContext* context, ffxQueryDescHeader* desc)
         return FFX_API_RETURN_OK;
     }
 
-    if (_contexts.contains(*context) && !Config::Instance()->EnableHotSwapping.value_or_default())
+    if (context != nullptr && _contexts.contains(*context) && !Config::Instance()->EnableHotSwapping.value_or_default())
     {
         LOG_INFO("Hot swapping disabled, ignoring upscaler query");
         return FFX_API_RETURN_OK;
