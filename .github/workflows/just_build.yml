@@ -143,6 +143,55 @@ jobs:
         Write-Output "Successfully copied dlssg_to_fsr3_amd_is_better.dll to artifact directory"
       continue-on-error: false
     
+    - name: Download latest fakenvapi release
+      id: fakenvapi_download
+      shell: powershell
+      run: |
+        # Get the latest release info from the API
+        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/FakeMichau/fakenvapi/releases/latest"
+        
+        # Find the fakenvapi.zip asset
+        $asset = $releases.assets | Where-Object { 
+          $_.name -eq "fakenvapi.zip"
+        } | Select-Object -First 1
+        
+        if (-not $asset) {
+            Write-Error "Could not find fakenvapi.zip in the latest release"
+            exit 1
+        }
+        
+        Write-Output "Downloading $($asset.name)..."
+        
+        # Download the asset
+        $downloadUrl = $asset.browser_download_url
+        $zipPath = "${{ github.workspace }}\fakenvapi.zip"
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
+        
+        # Extract the ZIP file
+        $extractPath = "${{ github.workspace }}\fakenvapi-temp"
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+        
+        # Find the required files in the extracted directory
+        $nvapi64Path = Get-ChildItem -Path $extractPath -Recurse -Filter "nvapi64.dll" | Select-Object -First 1 -ExpandProperty FullName
+        $fakenvApiIniPath = Get-ChildItem -Path $extractPath -Recurse -Filter "fakenvapi.ini" | Select-Object -First 1 -ExpandProperty FullName
+        
+        if (-not $nvapi64Path) {
+            Write-Error "Could not find nvapi64.dll in the extracted files"
+            exit 1
+        }
+        
+        if (-not $fakenvApiIniPath) {
+            Write-Error "Could not find fakenvapi.ini in the extracted files"
+            exit 1
+        }
+        
+        # Copy the files to the artifact directory
+        Copy-Item -Path $nvapi64Path -Destination "${{ github.workspace }}\x64\Release\a\"
+        Copy-Item -Path $fakenvApiIniPath -Destination "${{ github.workspace }}\x64\Release\a\"
+        
+        Write-Output "Successfully copied nvapi64.dll and fakenvapi.ini to artifact directory"
+      continue-on-error: false
+    
     - name: Compress the artifact 
       run: |
         $zipName = "${{ steps.get_version.outputs.filename }}.7z"
