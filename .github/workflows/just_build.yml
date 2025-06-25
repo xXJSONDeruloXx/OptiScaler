@@ -27,6 +27,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    environment: Build
 
     steps:
     - uses: actions/checkout@v4
@@ -99,6 +100,34 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}} /verbosity:minimal
       
+    - name: upload-unsigned-artifact
+      id: upload-unsigned-artifact
+      uses: actions/upload-artifact@v4
+      with: 
+        name: '${{ steps.get_version.outputs.filename }}_unsigned_dll'
+        path: '${{ github.workspace }}\x64\Release\a\OptiScaler.dll'
+        compression-level: 9
+        if-no-files-found: error
+
+    - id: optional_step_id
+      uses: signpath/github-action-submit-signing-request@v1.1
+      with:
+        api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+        organization-id: 'cea1f484-9039-4fe9-bb48-e7e5b0b09526'
+        project-slug: 'OptiScaler'
+        signing-policy-slug: 'test-signing'
+        github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+        wait-for-completion: true
+        output-artifact-directory: 'signed'
+
+    - name: Copy Back Signed Library
+      id: copy_back
+      working-directory: ${{ github.workspace }}
+      shell: powershell
+      run: |
+        cd .\signed
+        copy .\OptiScaler.dll '${{ github.workspace }}\x64\Release\a\OptiScaler.dll' -Force
+
     - name: Compress the artifact 
       run: |
         $zipName = "${{ steps.get_version.outputs.filename }}.7z"
@@ -108,10 +137,7 @@ jobs:
         
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.get_version.outputs.filename }}
-        path: ${{ github.workspace }}\${{ steps.get_version.outputs.filename }}.7z
+        name: '${{ steps.get_version.outputs.filename }}'
+        path: '${{ github.workspace }}\${{ steps.get_version.outputs.filename }}.7z'
         compression-level: 0
         if-no-files-found: error
-        
-
-
