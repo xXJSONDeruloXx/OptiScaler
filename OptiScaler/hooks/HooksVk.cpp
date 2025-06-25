@@ -127,9 +127,8 @@ static VkResult hkvkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32Surf
     auto procHwnd = Util::GetProcessWindow();
     LOG_DEBUG("procHwnd: {0:X}, swapchain hwnd: {1:X}", (UINT64) procHwnd, (UINT64) pCreateInfo->hwnd);
 
-    if (result == VK_SUCCESS &&
-        !State::Instance()
-             .vulkanSkipHooks) // && procHwnd == pCreateInfo->hwnd) // On linux sometimes procHwnd != pCreateInfo->hwnd
+    // && procHwnd == pCreateInfo->hwnd) // On linux sometimes procHwnd != pCreateInfo->hwnd
+    if (result == VK_SUCCESS && !State::Instance().vulkanSkipHooks)
     {
         MenuOverlayVk::DestroyVulkanObjects(false);
 
@@ -157,8 +156,8 @@ static VkResult hkvkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, cons
     {
         MenuOverlayVk::DestroyVulkanObjects(false);
 
-        _instance = *pInstance;
-        LOG_DEBUG("_instance captured: {0:X}", (UINT64) _instance);
+        State::Instance().VulkanInstance = *pInstance;
+        LOG_DEBUG("State::Instance().VulkanInstance captured: {0:X}", (UINT64) State::Instance().VulkanInstance);
     }
 
     LOG_FUNC_RESULT(result);
