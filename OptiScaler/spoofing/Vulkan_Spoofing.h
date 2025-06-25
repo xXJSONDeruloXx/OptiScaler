@@ -368,7 +368,7 @@ inline static VkResult hkvkCreateDevice(VkPhysicalDevice physicalDevice, VkDevic
             }
         }
 
-        LOG_DEBUG("Adding {}", extName);
+        // LOG_DEBUG("Adding {}", extName);
         newExtensionList.push_back(extName);
     }
 
@@ -386,24 +386,24 @@ inline static VkResult hkvkCreateDevice(VkPhysicalDevice physicalDevice, VkDevic
     LOG_INFO("Adding FFX Vulkan extensions");
     newExtensionList.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
 
-    LOG_INFO("Adding XeSS Vulkan extensions");
-    newExtensionList.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
-    newExtensionList.push_back(VK_KHR_SHADER_INTEGER_DOT_PRODUCT_EXTENSION_NAME);
-    newExtensionList.push_back(VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME);
+    if (State::Instance().libxessExists)
+    {
+        LOG_INFO("Adding XeSS Vulkan extensions");
+        newExtensionList.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
+        newExtensionList.push_back(VK_KHR_SHADER_INTEGER_DOT_PRODUCT_EXTENSION_NAME);
+        newExtensionList.push_back(VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME);
+    }
 
     pCreateInfo->enabledExtensionCount = static_cast<uint32_t>(newExtensionList.size());
     pCreateInfo->ppEnabledExtensionNames = newExtensionList.data();
 
     LOG_DEBUG("Final extension count: {0}", pCreateInfo->enabledExtensionCount);
 
-    /*
-    We already listing extensions above, no need for this
-
-    LOG_DEBUG("final extensions:");
+    // We already listing extensions above, no need for this
+    LOG_DEBUG("Extensions:");
 
     for (size_t i = 0; i < pCreateInfo->enabledExtensionCount; i++)
         LOG_DEBUG("  {0}", pCreateInfo->ppEnabledExtensionNames[i]);
-    */
 
     // Skip spoofing for Intel Arc
     State::Instance().skipSpoofing = true;
