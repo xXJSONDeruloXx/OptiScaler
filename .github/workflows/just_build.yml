@@ -192,17 +192,51 @@ jobs:
         Write-Output "Successfully copied nvapi64.dll and fakenvapi.ini to artifact directory"
       continue-on-error: false
     
-    - name: Compress the artifact 
+    # Create NVIDIA version (without external files)
+    - name: Create NVIDIA version (without external files)
+      shell: powershell
       run: |
-        $zipName = "${{ steps.get_version.outputs.filename }}.7z"
-        7z a -r ${{ github.workspace }}\$zipName ${{ github.workspace }}\x64\Release\a\*.*
-
-      continue-on-error: false
+        # Create a copy of the artifact directory for NVIDIA version
+        $nvidiaDir = "${{ github.workspace }}\x64\Release\nvidia"
         
+        # Create directory and copy all files
+        New-Item -ItemType Directory -Path $nvidiaDir -Force
+        Copy-Item -Path "${{ github.workspace }}\x64\Release\a\*" -Destination $nvidiaDir -Recurse -Force
+        
+        # Remove the external files that should not be in the NVIDIA version
+        Remove-Item -Path "$nvidiaDir\dlssg_to_fsr3_amd_is_better.dll" -ErrorAction SilentlyContinue
+        Remove-Item -Path "$nvidiaDir\fakenvapi.ini" -ErrorAction SilentlyContinue
+        Remove-Item -Path "$nvidiaDir\nvapi64.dll" -ErrorAction SilentlyContinue
+        
+        Write-Output "Successfully created NVIDIA version directory without external files"
+    
+    # Compress AMD version (with all files)
+    - name: Compress AMD artifact 
+      run: |
+        $zipName = "${{ steps.get_version.outputs.filename }}_amd.7z"
+        7z a -r ${{ github.workspace }}\$zipName ${{ github.workspace }}\x64\Release\a\*.*
+      continue-on-error: false
+    
+    # Compress NVIDIA version (without external files)
+    - name: Compress NVIDIA artifact
+      run: |
+        $zipName = "${{ steps.get_version.outputs.filename }}_nvidia.7z"
+        7z a -r ${{ github.workspace }}\$zipName ${{ github.workspace }}\x64\Release\nvidia\*.*
+      continue-on-error: false
+    
+    # Upload AMD version
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.get_version.outputs.filename }}
-        path: ${{ github.workspace }}\${{ steps.get_version.outputs.filename }}.7z
+        name: ${{ steps.get_version.outputs.filename }}_amd
+        path: ${{ github.workspace }}\${{ steps.get_version.outputs.filename }}_amd.7z
+        compression-level: 0
+        if-no-files-found: error
+    
+    # Upload NVIDIA version
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.get_version.outputs.filename }}_nvidia
+        path: ${{ github.workspace }}\${{ steps.get_version.outputs.filename }}_nvidia.7z
         compression-level: 0
         if-no-files-found: error
 
