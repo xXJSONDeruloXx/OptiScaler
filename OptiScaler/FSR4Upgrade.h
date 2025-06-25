@@ -9,11 +9,14 @@
 
 #include <Unknwn.h>
 #include <Windows.h>
+#include <scanner/scanner.h>
 
 typedef HRESULT(__cdecl* PFN_AmdExtD3DCreateInterface)(IUnknown* pOuter, REFIID riid, void** ppvObject);
+typedef uint64_t (*PFN_getModelBlob)(uint32_t preset, uint64_t unknown, uint64_t* source, uint64_t* size);
 
 static HMODULE moduleAmdxc64 = nullptr;
 static HMODULE fsr4Module = nullptr;
+static PFN_getModelBlob o_getModelBlob = nullptr;
 
 #pragma region GDI32
 
@@ -145,6 +148,22 @@ inline static std::vector<std::filesystem::path> GetDriverStore()
 
 #pragma endregion
 
+uint64_t hkgetModelBlob(uint32_t preset, uint64_t unknown, uint64_t* source, uint64_t* size)
+{
+    LOG_FUNC();
+
+    if (Config::Instance()->Fsr4Model.has_value())
+    {
+        preset = Config::Instance()->Fsr4Model.value();
+    }
+
+    State::Instance().currentFsr4Model = preset;
+
+    auto result = o_getModelBlob(preset, unknown, source, size);
+
+    return result;
+}
+
 /* Potato_of_Doom's Implementation */
 #pragma region IAmdExtFfxApi
 
@@ -198,6 +217,38 @@ struct AmdExtFfxApi : public IAmdExtFfxApi
             {
                 LOG_ERROR("Failed to load amdxcffx64.dll");
                 return E_NOINTERFACE;
+            }
+
+            {
+                const char* pattern = "83 F9 05 0F 87 ? ? ? ?";
+
+                auto fsr4ModulePtr = (uintptr_t) fsr4Module;
+
+                const uintptr_t moduleEnd = [&]()
+                {
+                    auto ntHeaders = reinterpret_cast<PIMAGE_NT_HEADERS64>(
+                        fsr4ModulePtr + reinterpret_cast<PIMAGE_DOS_HEADER>(fsr4ModulePtr)->e_lfanew);
+                    return static_cast<uintptr_t>(fsr4ModulePtr + ntHeaders->OptionalHeader.SizeOfImage);
+                }();
+
+                o_getModelBlob =
+                    (PFN_getModelBlob) scanner::FindPattern(fsr4ModulePtr, moduleEnd - fsr4ModulePtr, pattern);
+            }
+
+            if (o_getModelBlob)
+            {
+                LOG_DEBUG("Hooking model selection");
+
+                DetourTransactionBegin();
+                DetourUpdateThread(GetCurrentThread());
+
+                DetourAttach(&(PVOID&) o_getModelBlob, hkgetModelBlob);
+
+                DetourTransactionCommit();
+            }
+            else
+            {
+                LOG_ERROR("Couldn't hook model selection");
             }
 
             o_UpdateFfxApiProvider =
