@@ -761,17 +761,16 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
         State::Instance().fgTrigSource = "Immediate";
         fg->ExecuteHudlessCmdList();
     }
-
-    // else if (Config::Instance()->FGWaitForNextExecute.value_or_default())
-    //{
-    //     if (State::Instance().activeFgType == OptiFG && fg->IsActive() && fg->TargetFrame() < fg->FrameCount() &&
-    //         fg->ReadyForExecute())
-    //     {
-    //         LOG_DEBUG("Next execute dispatch fg");
-    //         State::Instance().fgTrigSource = "Next";
-    //         fg->Present();
-    //     }
-    // }
+    else if (Config::Instance()->FGWaitForNextExecute.value_or_default())
+    {
+        if (State::Instance().activeFgType == OptiFG && fg->IsActive() && fg->TargetFrame() < fg->FrameCount() &&
+            fg->ReadyForExecute())
+        {
+            LOG_DEBUG("Next execute dispatch fg");
+            State::Instance().fgTrigSource = "Next";
+            fg->ExecuteHudlessCmdList();
+        }
+    }
 }
 
 #pragma region Heap hooks

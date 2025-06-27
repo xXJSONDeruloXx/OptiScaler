@@ -268,13 +268,13 @@ ffxReturnCode_t ffxCreateContext_Dx12(ffxContext* context, ffxCreateContextDescH
         pathStorage.push_back(dllPath.wstring());
 
         if (nvngxDlssPath.has_value())
-            pathStorage.push_back(nvngxDlssPath.value().wstring());
+            pathStorage.push_back(nvngxDlssPath.value().parent_path().wstring());
 
         if (nvngxDlssDPath.has_value())
-            pathStorage.push_back(nvngxDlssDPath.value().wstring());
+            pathStorage.push_back(nvngxDlssDPath.value().parent_path().wstring());
 
         if (nvngxDlssGPath.has_value())
-            pathStorage.push_back(nvngxDlssGPath.value().wstring());
+            pathStorage.push_back(nvngxDlssGPath.value().parent_path().wstring());
 
         if (Config::Instance()->DLSSFeaturePath.has_value())
             pathStorage.push_back(Config::Instance()->DLSSFeaturePath.value());
@@ -409,7 +409,7 @@ ffxReturnCode_t ffxQuery_Dx12(ffxContext* context, ffxQueryDescHeader* desc)
         return FFX_API_RETURN_OK;
     }
 
-    if (_contexts.contains(*context) && !Config::Instance()->EnableHotSwapping.value_or_default())
+    if (context != nullptr && _contexts.contains(*context) && !Config::Instance()->EnableHotSwapping.value_or_default())
     {
         LOG_INFO("Hot swapping disabled, ignoring upscaler query");
         return FFX_API_RETURN_OK;

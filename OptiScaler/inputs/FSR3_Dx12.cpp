@@ -235,13 +235,13 @@ static Fsr3::FfxErrorCode ffxFsr3ContextCreate_Dx12(Fsr3::FfxFsr3UpscalerContext
         pathStorage.push_back(dllPath.wstring());
 
         if (nvngxDlssPath.has_value())
-            pathStorage.push_back(nvngxDlssPath.value().wstring());
+            pathStorage.push_back(nvngxDlssPath.value().parent_path().wstring());
 
         if (nvngxDlssDPath.has_value())
-            pathStorage.push_back(nvngxDlssDPath.value().wstring());
+            pathStorage.push_back(nvngxDlssDPath.value().parent_path().wstring());
 
         if (nvngxDlssGPath.has_value())
-            pathStorage.push_back(nvngxDlssGPath.value().wstring());
+            pathStorage.push_back(nvngxDlssGPath.value().parent_path().wstring());
 
         if (Config::Instance()->DLSSFeaturePath.has_value())
             pathStorage.push_back(Config::Instance()->DLSSFeaturePath.value());
@@ -439,13 +439,13 @@ ffxFsr3ContextCreate_Pattern_Dx12(Fsr3::FfxFsr3UpscalerContext* pContext,
         pathStorage.push_back(dllPath.wstring());
 
         if (nvngxDlssPath.has_value())
-            pathStorage.push_back(nvngxDlssPath.value().wstring());
+            pathStorage.push_back(nvngxDlssPath.value().parent_path().wstring());
 
         if (nvngxDlssDPath.has_value())
-            pathStorage.push_back(nvngxDlssDPath.value().wstring());
+            pathStorage.push_back(nvngxDlssDPath.value().parent_path().wstring());
 
         if (nvngxDlssGPath.has_value())
-            pathStorage.push_back(nvngxDlssGPath.value().wstring());
+            pathStorage.push_back(nvngxDlssGPath.value().parent_path().wstring());
 
         if (Config::Instance()->DLSSFeaturePath.has_value())
             pathStorage.push_back(Config::Instance()->DLSSFeaturePath.value());
