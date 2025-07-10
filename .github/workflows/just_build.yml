@@ -142,14 +142,13 @@ jobs:
         Copy-Item -Path $dllPath -Destination "${{ github.workspace }}\x64\Release\a\"
         
         Write-Output "Successfully copied dlssg_to_fsr3_amd_is_better.dll to artifact directory"
-      continue-on-error: false
     
     - name: Download latest fakenvapi release
       id: fakenvapi_download
       shell: powershell
       run: |
         # Get the latest release info from the API
-        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/FakeMichau/fakenvapi/releases/latest"
+        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/optiscaler/fakenvapi/releases/latest"
         
         # Find the fakenvapi.zip asset
         $asset = $releases.assets | Where-Object { 
@@ -233,4 +232,5 @@ jobs:
         name: '${{ steps.get_version.outputs.filename }}'
         path: '${{ github.workspace }}\${{ steps.get_version.outputs.filename }}.7z'
         compression-level: 0
+        if-no-files-found: error
         if-no-files-found: error
