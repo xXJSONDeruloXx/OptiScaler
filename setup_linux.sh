@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# Headless mode: skip clear if pre-configured
-[ -z "$filename" ] && clear || echo "Running in headless mode..."
+clear
 
-echo " ::::::::  :::::::::  ::::::::::: :::::::::::  ::::::::   ::::::::      :::     :::        :::::::::: :::::::::  "
+echo " ::::::::  :::::::::  ::::::::::: ::::::::::  ::::::::   ::::::::      :::     :::        :::::::::: :::::::::  "
 echo ":+:    :+: :+:    :+:     :+:         :+:     :+:    :+: :+:    :+:   :+: :+:   :+:        :+:        :+:    :+: "
 echo "#+:    +:+ +:+    +:+     +:+         +:+     +:+        +:+         +:+   +:+  +:+        +:+        +:+    +:+ "
 echo "+#+    +:+ +#++:++#+      +#+         +#+     +#++:++#++ +#+        +#++:++#++: +#+        +#++:++#   +#++:++#:  "
@@ -253,7 +252,9 @@ echo ""
 echo "Coping is strong with this one..."
 echo ""
 
-read -p "Do you want to remove OptiScaler? [y/n]: " remove_choice
+if [ -z "$remove_choice" ]; then
+    read -p "Do you want to remove OptiScaler? [y/n]: " remove_choice
+fi
 
 if [ "$remove_choice" = "y" ] || [ "$remove_choice" = "Y" ]; then
     echo ""
