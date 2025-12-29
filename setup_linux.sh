@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-clear
+# Headless mode: skip clear if pre-configured
+[ -z "$filename" ] && clear || echo "Running in headless mode..."
 
 echo " ::::::::  :::::::::  ::::::::::: :::::::::::  ::::::::   ::::::::      :::     :::        :::::::::: :::::::::  "
 echo ":+:    :+: :+:    :+:     :+:         :+:     :+:    :+: :+:    :+:   :+: :+:   :+:        :+:        :+:    :+: "
@@ -34,8 +35,8 @@ if [ ! -f "OptiScaler.dll" ]; then
     exit 1
 fi
 
-# Unreal Engine detection
-if [ -d "$SCRIPT_DIR/Engine" ]; then
+# Unreal Engine detection (skip for headless)
+if [ -d "$SCRIPT_DIR/Engine" ] && [ -z "$filename" ]; then
     echo "Found Engine folder, if this is an Unreal Engine game then please extract OptiScaler to #CODENAME#/Binaries/Win64"
     echo ""
 
@@ -54,6 +55,20 @@ if [ -d "$SCRIPT_DIR/Engine" ]; then
 fi
 
 select_filename() {
+    # Skip if filename already set and valid
+    if [ -n "$filename" ]; then
+        case "$filename" in
+            dxgi.dll|winmm.dll|version.dll|dbghelp.dll|d3d12.dll|wininet.dll|winhttp.dll|OptiScaler.asi)
+                selected_filename="$filename"
+                return
+                ;;
+            *)
+                echo "Invalid filename: $filename"
+                exit 1
+                ;;
+        esac
+    fi
+    
     while true; do
         echo ""
         echo "Choose a filename for OptiScaler (default is dxgi.dll):"
@@ -106,6 +121,16 @@ select_filename() {
             echo ""
             echo "WARNING: $selected_filename already exists in the current folder."
             echo ""
+            
+            if [ -n "$overwrite" ]; then
+                overwrite_choice="$overwrite"
+                if [[ "$overwrite_choice" =~ ^(yes|y)$ ]]; then
+                    break
+                else
+                    echo "File exists and overwrite=$overwrite, exiting."
+                    exit 1
+                fi
+            fi
 
             while true; do
                 read -p "Do you want to overwrite it? [y/n]: " overwrite_choice
@@ -138,7 +163,11 @@ if command -v nvidia-smi >/dev/null 2>&1; then
     fi
 fi
 
-while true; do
+if [ -n "$vendor" ]; then
+    using_nvidia="$vendor"
+fi
+
+while [ -z "$using_nvidia" ]; do
     echo ""
     if [ "$NVIDIA_DETECTED" = true ]; then
         default_value="y"
@@ -152,7 +181,11 @@ while true; do
     using_nvidia=${using_nvidia:-$default_value}
     
     if [[ "$using_nvidia" =~ ^(no|n)$ ]]; then
-        while true; do
+        if [ -n "$dlss" ]; then
+            using_dlss="$dlss"
+        fi
+        
+        while [ -z "$using_dlss" ]; do
             echo ""
             read -r -p "Will you try to use DLSS inputs? (enables spoofing, required for DLSS FG, Reflex->AL2) [Y/n]: " using_dlss
 
