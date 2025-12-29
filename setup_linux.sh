@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-
+for arg in "$@"; do
+    case "$arg" in
+        --filename=*) filename="${arg#*=}" ;;
+        --overwrite=*) overwrite="${arg#*=}" ;;
+        --vendor=*) vendor="${arg#*=}" ;;
+        --dlss=*) dlss="${arg#*=}" ;;
+    esac
+done
 clear
 
 echo " ::::::::  :::::::::  ::::::::::: ::::::::::  ::::::::   ::::::::      :::     :::        :::::::::: :::::::::  "
@@ -239,6 +246,12 @@ fi
 create_uninstaller() {
     cat > "remove_optiscaler.sh" << 'EOF'
 #!/usr/bin/env bash
+
+for arg in "$@"; do
+    case "$arg" in
+        --remove=*) remove_choice="${arg#*=}" ;;
+    esac
+done
 
 clear
 echo " ::::::::  :::::::::  ::::::::::: :::::::::::  ::::::::   ::::::::      :::     :::        :::::::::: :::::::::  "
