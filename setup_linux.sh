@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 for arg in "$@"; do
     case "$arg" in
-        --filename=*) filename="${arg#*=}" ;;
-        --overwrite=*) overwrite="${arg#*=}" ;;
-        --vendor=*) vendor="${arg#*=}" ;;
-        --dlss=*) dlss="${arg#*=}" ;;
+        --filename=*) selected_filename="${arg#*=}" ;;
+        --overwrite=*) overwrite_choice="${arg#*=}" ;;
+        --using_nvidia=*) using_nvidia="${arg#*=}" ;;
+        --using_dlss=*) using_dlss="${arg#*=}" ;;
     esac
 done
 clear
@@ -42,7 +42,7 @@ if [ ! -f "OptiScaler.dll" ]; then
 fi
 
 # Unreal Engine detection (skip for headless)
-if [ -d "$SCRIPT_DIR/Engine" ] && [ -z "$filename" ]; then
+if [ -d "$SCRIPT_DIR/Engine" ] && [ -z "$selected_filename" ]; then
     echo "Found Engine folder, if this is an Unreal Engine game then please extract OptiScaler to #CODENAME#/Binaries/Win64"
     echo ""
 
@@ -62,14 +62,13 @@ fi
 
 select_filename() {
     # Skip if filename already set and valid
-    if [ -n "$filename" ]; then
-        case "$filename" in
+    if [ -n "$selected_filename" ]; then
+        case "$selected_filename" in
             dxgi.dll|winmm.dll|version.dll|dbghelp.dll|d3d12.dll|wininet.dll|winhttp.dll|OptiScaler.asi)
-                selected_filename="$filename"
                 return
                 ;;
             *)
-                echo "Invalid filename: $filename"
+                echo "Invalid filename: $selected_filename"
                 exit 1
                 ;;
         esac
@@ -128,12 +127,11 @@ select_filename() {
             echo "WARNING: $selected_filename already exists in the current folder."
             echo ""
             
-            if [ -n "$overwrite" ]; then
-                overwrite_choice="$overwrite"
+            if [ -n "$overwrite_choice" ]; then
                 if [[ "$overwrite_choice" =~ ^(yes|y)$ ]]; then
                     break
                 else
-                    echo "File exists and overwrite=$overwrite, exiting."
+                    echo "File exists and overwrite_choice=$overwrite_choice, exiting."
                     exit 1
                 fi
             fi
@@ -169,10 +167,6 @@ if command -v nvidia-smi >/dev/null 2>&1; then
     fi
 fi
 
-if [ -n "$vendor" ]; then
-    using_nvidia="$vendor"
-fi
-
 while [ -z "$using_nvidia" ]; do
     echo ""
     if [ "$NVIDIA_DETECTED" = true ]; then
@@ -187,10 +181,6 @@ while [ -z "$using_nvidia" ]; do
     using_nvidia=${using_nvidia:-$default_value}
     
     if [[ "$using_nvidia" =~ ^(no|n)$ ]]; then
-        if [ -n "$dlss" ]; then
-            using_dlss="$dlss"
-        fi
-        
         while [ -z "$using_dlss" ]; do
             echo ""
             read -r -p "Will you try to use DLSS inputs? (enables spoofing, required for DLSS FG, Reflex->AL2) [Y/n]: " using_dlss
