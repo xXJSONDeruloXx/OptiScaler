@@ -265,8 +265,20 @@ create_uninstaller() {
     cat > "remove_optiscaler.sh" << 'EOF'
 #!/usr/bin/env bash
 
+show_help() {
+    echo ""
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --remove=<y|n>    Confirm removal (y/n)"
+    echo "  -h, --help        Show this help message"
+    echo ""
+    exit 0
+}
+
 for arg in "$@"; do
     case "$arg" in
+        -h|--help) show_help ;;
         --remove=*) remove_choice="${arg#*=}" ;;
     esac
 done
@@ -313,7 +325,9 @@ else
     echo ""
 fi
 
-read -p "Press Enter to exit..."
+if [ $# -eq 0 ]; then
+    read -p "Press Enter to exit..."
+fi
 EOF
 
     # Replace the placeholder with the actual selected filename
