@@ -1,6 +1,34 @@
 #!/usr/bin/env bash
+
+show_help() {
+    echo ""
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --filename=<string>        Set target filename for OptiScaler.dll. Options are:"
+    echo "                            - dxgi.dll"
+    echo "                            - winmm.dll"
+    echo "                            - version.dll"
+    echo "                            - dbghelp.dll"
+    echo "                            - d3d12.dll"
+    echo "                            - wininet.dll"
+    echo "                            - winhttp.dll"
+    echo "                            - OptiScaler.asi"
+    echo ""
+    echo "  --overwrite=<y|n>       Overwrite existing file (y/n)"
+    echo "  --using_nvidia=<y|n>    Using Nvidia GPU (y/n)"
+    echo "  --using_dlss=<y|n>      Use DLSS inputs/spoofing (y/n)"
+    echo "  -h, --help              Show this help message"
+    echo ""
+    echo "Example:"
+    echo "  $0 --filename=dxgi.dll --overwrite=y --using_nvidia=n --using_dlss=y"
+    echo ""
+    exit 0
+}
+
 for arg in "$@"; do
     case "$arg" in
+        -h|--help) show_help ;;
         --filename=*) selected_filename="${arg#*=}" ;;
         --overwrite=*) overwrite_choice="${arg#*=}" ;;
         --using_nvidia=*) using_nvidia="${arg#*=}" ;;
@@ -323,7 +351,9 @@ echo "Remember: Insert key opens OptiScaler overlay, Page Up/Down for performanc
 echo ""
 
 # Cleanup - remove setup script
-read -p "Press Enter to exit..."
+if [ $# -eq 0 ]; then
+    read -p "Press Enter to exit..."
+fi
 
 rm -f "$0"
 
